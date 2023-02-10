@@ -15,7 +15,7 @@ from logger import logger
 from commu.model.config_helper import get_default_cfg_training
 from commu.model.dataset import ComMUDataset
 from commu.model.exp_utils import logging_config
-from commu.model.model import MemTransformerLM
+from commu.model.model import MemTransformerLM, OriginalTransformer
 
 @contextlib.contextmanager
 def sync_workers(args):
@@ -56,6 +56,9 @@ def save_checkpoint(
 
 def parse_args():
     parser = argparse.ArgumentParser(description="PyTorch Transformer Language Model")
+    parser.add_argument(
+        "--model", type=str, default='transformer-xl', help="option : transformer, transformer-xl"
+    )
     parser.add_argument(
         "--data_dir", type=str, required=True, help="location of the data corpus"
     )
@@ -424,7 +427,10 @@ test_iter = dataset.eval_iterator(
 logger.info("Build the model")
 
 assert cfg.MODEL.units % cfg.MODEL.num_heads == 0
-model = MemTransformerLM(cfg, vocab)
+if args.model == 'transformer-xl':
+    model = MemTransformerLM(cfg, vocab)
+elif args.model == 'transformer':
+    model = OriginalTransformer(cfg, vocab)
 model.apply(weights_init)
 model.word_emb.apply(
     weights_init
