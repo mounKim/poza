@@ -691,3 +691,24 @@ class MemTransformerLM(nn.Module):
         loss = loss.view(tgt_len, -1)
 
         return (loss, new_mems)
+    
+
+class OriginalTransformer(MemTransformerLM):
+    def __init__(self, cfg, vocab):
+        super().__init__(cfg, vocab)
+        self.transformer = nn.Transformer(d_model=self.d_model, nhead=self.n_head)
+
+    def forward(self, data, target, reset_mems, mems):
+        if mems is None:
+            mems = self.init_mems(self.n_layer)
+        tgt_len = target.size(0)
+        d_hidden, d_new_mems = MemTransformerLM._forward(self, data, reset_mems, mems=mems)
+        t_hidden, t_new_mems = MemTransformerLM._forward(self, target, reset_mems, mems=mems)
+        d_pred_hid = d_hidden[-tgt_len:]
+        t_pred_hid = t_hidden[-tgt_len:]
+        prediction = self.transformer(d_pred_hid, t_pred_hid)
+        # self.crit(Tensor(8192, 500), Tensor(8192))
+        # loss = Tensor(128, 64)
+        loss = self.crit(prediction.view(-1, prediction.size(-1)), target.view(-1))
+        loss = loss.view(tgt_len, -1)
+        return (loss, d_new_mems)
