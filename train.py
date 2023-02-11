@@ -475,7 +475,7 @@ model = DDP(
     device_ids=[args.local_rank],
     output_device=args.local_rank,
     broadcast_buffers=False,
-    find_unused_parameters=False,
+    find_unused_parameters=True,
 )
 
 logger.info("=" * 100)
