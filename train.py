@@ -495,7 +495,10 @@ if __name__ == "__main__":
     cfg.defrost()
     cfg.MODEL.same_length = True
     cfg.freeze()
-    model = MemTransformerLM(cfg, dataset._vocab)
+    if args.model == 'transformer-xl':
+        model = MemTransformerLM(cfg, dataset._vocab)
+    elif args.model == 'transformer':
+        model = OriginalTransformer(cfg, dataset._vocab)
     checkpoint = torch.load(os.path.join(args.work_dir, "checkpoint_best.pt"))
 
     model.load_state_dict(checkpoint["model"])
