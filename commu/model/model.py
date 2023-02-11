@@ -696,7 +696,8 @@ class MemTransformerLM(nn.Module):
 class OriginalTransformer(MemTransformerLM):
     def __init__(self, cfg, vocab):
         super().__init__(cfg, vocab)
-        self.transformer = nn.Transformer(d_model=self.d_model, nhead=self.n_head)
+        self.decoder_layer = nn.TransformerDecoderLayer(d_model=self.d_model, nhead=self.n_head)
+        self.transformer = nn.TransformerDecoder(self.decoder_layer, num_layers=self.n_layer)
 
     def forward(self, data, target, reset_mems, mems):
         if mems is None:
