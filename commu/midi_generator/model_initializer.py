@@ -7,7 +7,7 @@ import yacs.config
 from commu.midi_generator.container import ModelArguments
 from commu.model.config_helper import get_default_cfg_inference, get_default_cfg_training
 from commu.model.dataset import BaseVocab
-from commu.model.model import MemTransformerLM
+from commu.model.model import MemTransformerLM, OriginalTransformer
 
 
 class ModelInitializeTask:
