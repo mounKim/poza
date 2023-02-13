@@ -353,6 +353,83 @@ class RelPartialLearnableMultiHeadAttn(RelMultiHeadAttn):
 
         return output
 
+    
+class RelPartialLearnableMultiHeadAttnNotMem(RelMultiHeadAttn):
+    def __init__(self, *args, **kwargs):
+        super(RelPartialLearnableMultiHeadAttnNotMem, self).__init__(
+            *args, **kwargs
+        )  # ext_len passed here
+
+        self.r_net = nn.Linear(self.d_model, self.n_head * self.d_head, bias=False)
+
+    def forward(self, w, r, r_w_bias, r_r_bias, attn_mask=None, mems=None):
+        qlen, rlen, bsz = w.size(0), r.size(0), w.size(1)
+
+        w_heads = self.qkv_net(w)
+        r_head_k = self.r_net(r)
+
+        w_head_q, w_head_k, w_head_v = torch.chunk(w_heads, 3, dim=-1)
+
+        klen = w_head_k.size(0)
+
+        w_head_q = w_head_q.view(
+            qlen, bsz, self.n_head, self.d_head
+        )  # qlen x bsz x n_head x d_head
+        w_head_k = w_head_k.view(
+            klen, bsz, self.n_head, self.d_head
+        )  # qlen x bsz x n_head x d_head
+        w_head_v = w_head_v.view(
+            klen, bsz, self.n_head, self.d_head
+        )  # qlen x bsz x n_head x d_head
+
+        r_head_k = r_head_k.view(
+            rlen, self.n_head, self.d_head
+        )  # qlen x n_head x d_head
+
+        #### compute attention score
+        rw_head_q = w_head_q + r_w_bias  # qlen x bsz x n_head x d_head
+        AC = torch.einsum(
+            "ibnd,jbnd->bnij", (rw_head_q, w_head_k)
+        )  # qlen x klen x bsz x n_head
+
+        rr_head_q = w_head_q + r_r_bias
+        BD = torch.einsum(
+            "ibnd,jnd->bnij", (rr_head_q, r_head_k)
+        )  # qlen x klen x bsz x n_head
+        BD = self._rel_shift(BD)
+
+        # [bsz x n_head x qlen x klen]
+        attn_score = AC + BD
+        attn_score.mul_(self.scale)
+
+        #### compute attention probability
+        if attn_mask is not None:
+            if attn_mask.dim() == 2:
+                attn_score.masked_fill_(attn_mask[None, None, :, :], -float("inf"))
+            elif attn_mask.dim() == 3:
+                attn_score.masked_fill_(attn_mask[:, None, :, :], -float("inf"))
+
+        # [bsz x n_head x qlen x klen]
+        attn_prob = F.softmax(attn_score, dim=3)
+        attn_prob = self.dropatt(attn_prob)
+
+        #### compute attention vector
+        attn_vec = torch.einsum("bnij,jbnd->ibnd", (attn_prob, w_head_v))
+
+        # [qlen x bsz x n_head x d_head]
+        attn_vec = attn_vec.contiguous().view(
+            attn_vec.size(0), attn_vec.size(1), self.n_head * self.d_head
+        )
+
+        ##### linear projection
+        attn_out = self.o_net(attn_vec)
+        attn_out = self.drop(attn_out)
+
+        ##### residual connection + layer normalization
+        output = self.layer_norm(w + attn_out)
+
+        return output
+
 
 # Default attention layer used
 class RelPartialLearnableDecoderLayer(nn.Module):
@@ -375,6 +452,15 @@ class RelPartialLearnableDecoderLayer(nn.Module):
         output = self.pos_ff(output)
 
         return output
+
+    
+class RelPartialLearnableDecoderLayerNotMem(RelPartialLearnableDecoderLayer):
+    def __init__(self, n_head, d_model, d_head, d_inner, dropout, **kwargs):
+        super().__init__(n_head, d_model, d_head, d_inner, dropout, **kwargs)
+
+        self.dec_attn = RelPartialLearnableMultiHeadAttnNotMem(
+            n_head, d_model, d_head, dropout, **kwargs
+        )
 
 
 class AdaptiveEmbedding(nn.Module):
@@ -696,14 +782,17 @@ class MemTransformerLM(nn.Module):
 class OriginalTransformer(MemTransformerLM):
     def __init__(self, cfg, vocab):
         super().__init__(cfg, vocab)
-        self.decoder_layer = nn.TransformerDecoderLayer(d_model=self.d_model, nhead=self.n_head)
-        self.transformer = nn.TransformerDecoder(self.decoder_layer, num_layers=self.n_layer)
-
-    def forward(self, data, target, reset_mems, mems):
-        if mems is None:
-            mems = self.init_mems(self.n_layer)
-        tgt_len = target.size(0)
-        prediction = self.transformer(self.word_emb(data), self.word_emb(target))
-        loss = self.crit(prediction.view(-1, prediction.size(-1)), target.view(-1))
-        loss = loss.view(tgt_len, -1)
-        return (loss, torch.empty(7, 128, 64, 500))
+        self.layers = nn.ModuleList()
+        for i in range(cfg.MODEL.num_layers):
+            self.layers.append(
+                RelPartialLearnableDecoderLayerNotMem(
+                    cfg.MODEL.num_heads,
+                    cfg.MODEL.units,
+                    cfg.MODEL.units // cfg.MODEL.num_heads,
+                    cfg.MODEL.inner_size,
+                    cfg.MODEL.dropout,
+                    tgt_len=cfg.TRAIN.tgt_length,
+                    mem_len=cfg.TRAIN.mem_length,
+                    dropatt=cfg.MODEL.attention_dropout,
+                )
+            )
