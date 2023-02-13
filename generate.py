@@ -10,6 +10,7 @@ def parse_args() -> Dict[str, argparse.ArgumentParser]:
     input_arg_parser = argparse.ArgumentParser(description="Input Arguments")
 
     # Model Arguments
+    model_arg_parser.add_argument("--model", type=str, default='transformer-xl', help="option : transformer, transformer-xl")
     model_arg_parser.add_argument("--checkpoint_dir", type=str)
 
     # Input Arguments
