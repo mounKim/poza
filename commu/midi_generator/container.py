@@ -12,6 +12,7 @@ from commu.preprocessor.utils.container import MidiMeta
 
 class ModelArguments(BaseModel):
     checkpoint_dir: str
+    model: str
 
 
 class TransXlInputData(MidiMeta):
