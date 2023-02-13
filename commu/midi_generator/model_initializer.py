@@ -42,7 +42,12 @@ class ModelInitializeTask:
 
     def initialize_model(self, training_cfg, model_fp):
         perform_vocab = BaseVocab()
-        model = MemTransformerLM(training_cfg, perform_vocab)
+        if self.model_args.model == 'transformer-xl':
+            print('generate with transformer-xl')
+            model = MemTransformerLM(training_cfg, perform_vocab)
+        else:
+            print('generate with transformer')
+            model = OriginalTransformer(training_cfg, perform_vocab)
         checkpoint = torch.load(model_fp)
         model.load_state_dict(checkpoint["model"], strict=False)
         model = model.to(self.device)
