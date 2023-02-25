@@ -132,7 +132,47 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
 
         return nll
 
+    
+def relative_position_bucket(relative_position, bidirectional=True, num_buckets=32, max_distance=128):
+    ret = 0
+    n = -relative_position
+    if bidirectional:
+        num_buckets //= 2
+        ret += (n < 0).to(torch.long) * num_buckets
+        n = torch.abs(n)
+    else:
+        n = torch.max(n, torch.zeros_like(n))
+    # now n is in the range [0, inf)
 
+    # half of the buckets are for exact increments in positions
+    max_exact = num_buckets // 2
+    is_small = n < max_exact
+
+    # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
+    val_if_large = max_exact + (
+            torch.log(n.float() / max_exact) / math.log(max_distance / max_exact) * (num_buckets - max_exact)
+    ).to(torch.long)
+    val_if_large = torch.min(val_if_large, torch.full_like(val_if_large, num_buckets - 1))
+    ret += torch.where(is_small, n, val_if_large)
+    return ret
+
+
+class T5PositionalEmbedding(nn.Module):
+    def __init__(self, num_head, bucket=16):
+        super(T5PositionalEmbedding, self).__init__()
+        self.num_head = num_head
+        self.bucket = bucket
+        self.embedding = nn.Embedding(self.bucket, self.num_head)
+
+    def forward(self, pos_seq, bsz=None):
+        pos_emb = self.embedding(relative_position_bucket(pos_seq.long(), True, self.bucket))
+
+        if bsz is not None:
+            return pos_emb[:, None, :].expand(-1, bsz, -1)
+        else:
+            return pos_emb[:, None, :]
+
+        
 class PositionalEmbedding(nn.Module):
     def __init__(self, demb):
         super(PositionalEmbedding, self).__init__()
