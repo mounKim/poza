@@ -155,6 +155,7 @@ def train():
                     * (target != dataset.vocab.pad_id).sum()
                     * cfg.TRAIN.batch_chunk
             )
+            loss.requires_grad_(True)
             loss.backward()
 
         log_token_num += int(batch_token_num)
