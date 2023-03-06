@@ -41,6 +41,23 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
         self.out_layers.append(nn.Linear(d_embed, n_token))
 
         self.keep_order = keep_order
+        
+    def label_smoothing(self, logit, target):
+        # velocity : 131~194
+        # duration : 304~431
+        # position : 432~559
+        output = []
+        for i in range(len(target)):
+            if 133 <= target[i] <= 192 or 306 <= target[i] <= 429 or 434 <= target[i] <= 557:
+                output.append((F.log_softmax(logit[i], dim=-1).gather(0, target[i] - 2) * 0.1 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] - 1) * 0.2 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i]) * 0.4 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] + 1) * 0.2 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] + 2) * 0.1).item() * -1)
+            else:
+                output.append(F.log_softmax(logit[i], dim=-1)[target[i]].item() * -1)
+
+        return torch.tensor(output)
 
     def _compute_logit(self, hidden, weight, bias, proj):
         if proj is None:
@@ -69,9 +86,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
                 self.out_layers[0].bias,
                 self.out_projs[0],
             )
-            nll = (
-                -F.log_softmax(logit, dim=-1).gather(1, target.unsqueeze(1)).squeeze(1)
-            )
+            nll = self.label_smoothing(logit, target)
         else:
             # construct weights and biases
             weights, biases = [], []
