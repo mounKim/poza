@@ -80,7 +80,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
             )
 
         # if self.n_clusters == 0:
-        if self.n_clusters > 0:
+        if self.n_clusters >= 0:
             logit = self._compute_logit(
                 hidden,
                 self.out_layers[0].weight,
