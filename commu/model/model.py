@@ -48,7 +48,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
         # position : 432~559
         for i in range(len(target)):
             if 133 <= target[i] <= 192 or 306 <= target[i] <= 429 or 434 <= target[i] <= 557:
-                logit[:, i] = logit[:, i - 1] * 0.1 + logit[:, i] * 0.8 + logit[:, i + 1] * 0.1
+                logit[:, target[i]] = logit[:, target[i] - 1] * 0.1 + logit[:, target[i]] * 0.8 + logit[:, target[i] + 1] * 0.1
 
         return logit
 
