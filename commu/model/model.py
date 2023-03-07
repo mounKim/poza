@@ -86,7 +86,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
                 self.out_layers[0].bias,
                 self.out_projs[0],
             )
-            nll = self.label_smoothing(logit, target)
+            nll = self.label_smoothing(logit, target).requires_grad_()
         else:
             # construct weights and biases
             weights, biases = [], []
