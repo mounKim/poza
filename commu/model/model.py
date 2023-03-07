@@ -49,11 +49,11 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
         output = []
         for i in range(len(target)):
             if 133 <= target[i] <= 192 or 306 <= target[i] <= 429 or 434 <= target[i] <= 557:
-                output.append((F.log_softmax(logit[i], dim=-1).gather(0, target[i] - 2) * 0.01 +
-                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] - 1) * 0.02 +
-                               F.log_softmax(logit[i], dim=-1).gather(0, target[i]) * 0.94 +
-                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] + 1) * 0.02 +
-                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] + 2) * 0.01).item() * -1)
+                output.append((F.log_softmax(logit[i], dim=-1).gather(0, target[i] - 2) * 0 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] - 1) * 0 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i]) * 1 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] + 1) * 0 +
+                               F.log_softmax(logit[i], dim=-1).gather(0, target[i] + 2) * 0).item() * -1)
             else:
                 output.append(F.log_softmax(logit[i], dim=-1)[target[i]].item() * -1)
 
