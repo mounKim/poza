@@ -31,7 +31,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
         self.out_layers = nn.ModuleList()
         self.out_projs = nn.ParameterList()
 
-
+        print(self.cutoffs)
         for i in range(len(self.cutoffs)):
             if d_proj != d_embed:
                 self.out_projs.append(nn.Parameter(torch.Tensor(d_proj, d_embed)))
@@ -79,8 +79,7 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
                 "Input and target should have the same size " "in the batch dimension."
             )
 
-        # if self.n_clusters == 0:
-        if self.n_clusters >= 0:
+        if self.n_clusters == 0:
             logit = self._compute_logit(
                 hidden,
                 self.out_layers[0].weight,
