@@ -23,13 +23,13 @@ def train(cfg):
     cfg.TRAIN.tgt_length = 128
     cfg.TRAIN.mem_length = 1024
     cfg.TRAIN.seed = 1111
-    cfg.TRAIN.lr = 0.004
-    cfg.TRAIN.lr_min = 0.0001
+    cfg.TRAIN.lr = 0.04
+    cfg.TRAIN.lr_min = 0.001
     cfg.TRAIN.warmup_step = 100
     cfg.TRAIN.clip = 1.0
-    cfg.TRAIN.max_step = 2000
+    cfg.TRAIN.max_step = 20000
     cfg.TRAIN.log_interval = 100
-    cfg.TRAIN.eval_interval = 400
+    cfg.TRAIN.eval_interval = 500
     cfg.TRAIN.weight_decay = 0.0
     return cfg
 
