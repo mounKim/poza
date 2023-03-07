@@ -46,10 +46,10 @@ class ProjectedAdaptiveLogSoftmax(nn.Module):
         # velocity : 131~194
         # duration : 304~431
         # position : 432~559
-        for i in range(len(target)):
-            if 133 <= target[i] <= 192 or 306 <= target[i] <= 429 or 434 <= target[i] <= 557:
-                logit[:, target[i]] = logit[:, target[i] - 1] * 0.1 + logit[:, target[i]] * 0.8 + logit[:, target[i] + 1] * 0.1
-
+        i = ((target >= 133) & (target <= 192)) | ((target >= 306) & (target <= 429)) | ((target >= 434) & (target <= 557))
+        idx = i.nonzero().squeeze()
+        tmp = target[idx]
+        logit[idx, tmp] = logit[idx, tmp - 1] * 0.1 + logit[idx, tmp] * 0.8 + logit[idx, tmp + 1] * 0.1
         return logit
 
     def _compute_logit(self, hidden, weight, bias, proj):
