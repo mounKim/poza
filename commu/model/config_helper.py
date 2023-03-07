@@ -27,9 +27,9 @@ def train(cfg):
     cfg.TRAIN.lr_min = 0.0001
     cfg.TRAIN.warmup_step = 100
     cfg.TRAIN.clip = 1.0
-    cfg.TRAIN.max_step = 20000
+    cfg.TRAIN.max_step = 2000
     cfg.TRAIN.log_interval = 100
-    cfg.TRAIN.eval_interval = 1000
+    cfg.TRAIN.eval_interval = 400
     cfg.TRAIN.weight_decay = 0.0
     return cfg
 
