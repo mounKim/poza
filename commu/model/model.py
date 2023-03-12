@@ -626,7 +626,7 @@ class MemTransformerLM(nn.Module):
         self._create_params()
 
     def _create_params(self):
-        self.pos_emb = T5PositionalEmbedding(self.n_head * self.d_head)
+        self.pos_emb = PositionalEmbedding(self.d_model)
         self.r_w_bias = nn.Parameter(torch.Tensor(self.n_head, self.d_head))
         self.r_r_bias = nn.Parameter(torch.Tensor(self.n_head, self.d_head))
 
